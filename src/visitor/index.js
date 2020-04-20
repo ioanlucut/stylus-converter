@@ -1,11 +1,11 @@
 import invariant from 'invariant'
 import {
   _get,
-  trimFirst,
+  getCharLength,
   nodesToJSON,
   repeatString,
-  getCharLength,
-  replaceFirstATSymbol
+  replaceFirstATSymbol,
+  trimFirst,
 } from '../util.js'
 
 let quote = `'`
@@ -48,17 +48,17 @@ let autoprefixer = true
 
 const COMPIL_CONFIT = {
   scss: {
-    variable: '$'
+    variable: '$',
   },
   less: {
-    variable: '@'
-  }
+    variable: '@',
+  },
 }
 
 const OPEARTION_MAP = {
   '&&': 'and',
   '!': 'not',
-  '||': 'or'
+  '||': 'or',
 }
 
 const KEYFRAMES_LIST = [
@@ -66,7 +66,7 @@ const KEYFRAMES_LIST = [
   '@-moz-keyframes ',
   '@-ms-keyframes ',
   '@-o-keyframes ',
-  '@keyframes '
+  '@keyframes ',
 ]
 
 const TYPE_VISITOR_MAP = {
@@ -105,7 +105,7 @@ const TYPE_VISITOR_MAP = {
   Keyframes: visitKeyframes,
   QueryList: visitQueryList,
   Namespace: visitNamespace,
-  Expression: visitExpression
+  Expression: visitExpression,
 }
 
 function handleLineno(lineno) {
@@ -292,7 +292,8 @@ function visitProperty({ expr, lineno, segments }) {
       const identVal = _get(ident, ['val', 'toJSON']) && ident.val.toJSON() || {}
       if (identVal.__type === 'Expression') {
         const beforeExpText = before + trimFirst(visitExpression(expr))
-        const expText = `${before}${segmentsText}: $${ident.name};`
+        const identName = ident.name.includes('$') ? ident.name : `$${ident.name}`
+        const expText = `${before}${segmentsText}: ${identName};`
         isProperty = false
         PROPERTY_LIST.unshift({ prop: segmentsText, value: '$' + ident.name })
         return beforeExpText + expText
@@ -537,6 +538,7 @@ function visitTernary({ cond, lineno }) {
 
 function visitBinOp({ op, left, right }) {
   binOpLength++
+
   function visitNegate(op) {
     if (!isNegate || (op !== '==' && op !== '!=')) {
       return op !== 'is defined' ? op : ''
@@ -650,7 +652,7 @@ function visitMedia(node) {
   const nodeVal = val.toJSON && val.toJSON() || {}
   const valText = visitNode(nodeVal)
   const block = visitBlock(node.block)
-  return `${before}@media ${valText + block}`
+  return `${before}@media ${`#{${valText}}` + block}`
 }
 
 function visitFeature(node) {
